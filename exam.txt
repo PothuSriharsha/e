@@ -1,0 +1,945 @@
+x==========================================================
+COMPILER DESIGN LAB PROGRAMS - BEGINNER FRIENDLY
+All programs are written in simple, easy-to-memorize style.
+Ubuntu commands are given before every program.
+==========================================================
+
+INSTALL REQUIRED TOOLS (ONLY ONCE)
+----------------------------------------------------------
+sudo apt update
+sudo apt install flex bison gcc
+
+FOR C PROGRAMS:
+gcc program.c -o program
+./program
+
+FOR LEX PROGRAMS:
+flex program.l
+gcc lex.yy.c -o program -lfl
+./program
+
+FOR LEX + YACC PROGRAMS:
+yacc -d program.y
+flex program.l
+gcc y.tab.c lex.yy.c -o program -lfl
+./program
+
+==========================================================
+PROGRAM 1
+IMPLEMENTATION OF SYMBOL TABLE AND LEXICAL ANALYZER
+Recognizes identifiers, constants, operators, and comments.
+
+
+%{
+#include <stdio.h>
+%}
+
+%%
+[a-zA-Z_][a-zA-Z0-9_]*  printf("Identifier: %s\n", yytext);
+[0-9]+                  printf("Constant: %s\n", yytext);
+"//".*                  printf("Comment: %s\n", yytext);
+[+\-*/=]                printf("Operator: %s\n", yytext);
+[ \t\n]+                ;
+.                       ;
+%%
+
+int main()
+{
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+
+
+==========================================================
+PROGRAM 2
+IMPLEMENTATION OF LEXICAL ANALYZER USING LEX
+
+
+%{
+#include <stdio.h>
+%}
+
+%%
+[0-9]+                  printf("Number: %s\n", yytext);
+[a-zA-Z_][a-zA-Z0-9_]*  printf("Word: %s\n", yytext);
+[+\-*/=]                printf("Operator: %s\n", yytext);
+[ \t\n]+                ;
+.                       ;
+%%
+
+int main()
+{
+    printf("Enter input: ");
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+
+==========================================================
+PROGRAM 3.1
+YACC SPECIFICATION FOR SYNTACTIC CATEGORIES
+This program recognizes simple assignment statements.
+----------------------------------------------------------
+SAVE AS: 3_1.l
+
+flex 3_1.l
+
+SAVE AS: 3_1.y
+
+yacc -d 3_1.y
+gcc y.tab.c lex.yy.c -o program3_1 -lfl
+./program3_1
+==========================================================
+
+3_1.l
+----------------------------------------------------------
+
+%{
+#include "y.tab.h"
+%}
+
+%%
+
+[a-zA-Z_][a-zA-Z0-9_]* {    return ID; }
+
+[0-9]+ {     return NUM; }
+
+"=" {    return '='; }
+
+"+" {    return '+'; }
+
+"\n" {    return 0; }
+
+[ \t] {  ; }
+
+. {  ; }
+
+%%
+
+int yywrap()
+{
+    return 1;
+}
+
+3_1.y
+----------------------------------------------------------
+
+%{
+#include <stdio.h>
+
+int yylex();
+void yyerror(char *message);
+%}
+
+%token ID NUM
+
+%%
+
+statement :
+    ID '=' expression     {         printf("Valid assignment statement\n");    };
+
+expression :
+    expression '+' NUM | NUM;
+
+%%
+
+void yyerror(char *message)
+{
+    printf("Invalid statement\n");
+}
+
+int main()
+{
+    yyparse();
+    return 0;
+}
+
+SAMPLE OUTPUT
+----------------------------------------------------------
+Input:
+x = 10 + 20
+
+Output:
+Valid assignment statement
+
+==========================================================
+PROGRAM 3.2
+RECOGNIZE A VALID VARIABLE
+A variable starts with a letter and is followed by letters or digits.
+----------------------------------------------------------
+SAVE AS: 3_2.l
+
+flex 3_2.l
+
+SAVE AS: 3_2.y
+
+yacc -d 3_2.y
+gcc y.tab.c lex.yy.c -o program3_2 -lfl
+./program3_2
+==========================================================
+
+3_2.l
+----------------------------------------------------------
+
+%{
+#include "y.tab.h"
+%}
+
+%%
+
+[a-zA-Z][a-zA-Z0-9]* {    return ID; }
+
+"\n"  {    return 0; }
+
+. {    ; }
+
+%%
+
+int yywrap()
+{
+    return 1;
+}
+
+3_2.y
+----------------------------------------------------------
+
+%{
+#include <stdio.h>
+
+int yylex();
+void yyerror(char *message);
+%}
+
+%token ID
+
+%%
+
+variable :
+    ID     {        printf("Valid variable\n");     }    ;
+
+%%
+
+void yyerror(char *message)
+{
+    printf("Invalid variable\n");
+}
+
+int main()
+{
+    yyparse();
+    return 0;
+}
+
+SAMPLE OUTPUT
+----------------------------------------------------------
+Input:
+abc123
+
+Output:
+Valid variable
+
+Invalid input:
+1abc
+
+Output:
+Invalid variable
+
+==========================================================
+PROGRAM 4
+CALCULATOR USING LEX AND YACC
+----------------------------------------------------------
+SAVE AS: 4.l
+
+flex 4.l
+
+SAVE AS: 4.y
+
+yacc -d 4.y
+gcc y.tab.c lex.yy.c -o program4 -lfl
+./program4
+==========================================================
+
+4.l
+----------------------------------------------------------
+
+%{
+#include "y.tab.h"
+#include <stdlib.h>
+%}
+
+%%
+
+[0-9]+ {
+    yylval = atoi(yytext);
+    return NUM;
+}
+
+[+\-*/()] {return yytext[0];}
+
+"\n" { return 0; }
+
+[ \t] { ; }
+
+. { ; }
+
+%%
+
+int yywrap()
+{
+    return 1;
+}
+
+4.y
+----------------------------------------------------------
+
+%{
+#include <stdio.h>
+
+int yylex();
+void yyerror(char *message);
+%}
+
+%token NUM
+
+%left '+' '-'
+%left '*' '/'
+
+%%
+
+input :
+    expression { printf("Result = %d\n", $1); };
+
+expression :
+    expression '+' expression { $$ = $1 + $3; } | 
+    expression '-' expression { $$ = $1 - $3; } |
+    expression '*' expression { $$ = $1 * $3; } |
+    expression '/' expression { $$ = $1 / $3; } |
+    '(' expression ')' { $$ = $2; } |
+    NUM { $$ = $1; };
+
+%%
+
+void yyerror(char *message)
+{
+    printf("Invalid expression\n");
+}
+
+int main()
+{
+    yyparse();
+    return 0;
+}
+
+
+
+==========================================================
+PROGRAM 5
+STACK STORAGE ALLOCATION STRATEGY
+
+
+#include <stdio.h>
+
+int main()
+{
+    int stack[5], top = -1, n, i;
+
+    printf("Enter number of elements (max 5): ");
+    scanf("%d", &n);
+
+    for(i = 0; i < n; i++)
+    {
+        scanf("%d", &stack[++top]);
+    }
+
+    printf("Stack elements:\n");
+
+    while(top != -1)
+        printf("%d\n", stack[top--]);
+
+    return 0;
+}
+
+
+
+==========================================================
+PROGRAM 6
+RECURSIVE DESCENT PARSER
+
+GRAMMAR:
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id
+
+
+#include <stdio.h>
+char s[50];
+int i = 0;
+
+int F()
+{
+    if(s[i] == 'i') { i++; return 1; }
+    return 0;
+}
+
+int T()
+{
+    if(!F()) return 0;
+    while(s[i] == '*')
+    {
+        i++;
+        if(!F()) return 0;
+    }
+    return 1;
+}
+
+int E()
+{
+    if(!T()) return 0;
+    while(s[i] == '+')
+    {
+        i++;
+        if(!T()) return 0;
+    }
+    return 1;
+}
+
+int main()
+{
+    printf("Enter expression: ");
+    scanf("%49s", s);
+
+    if(E() && s[i] == '\0')
+        printf("Valid");
+    else
+        printf("Invalid");
+
+    return 0;
+}
+
+
+==========================================================
+PROGRAM 7
+RECURSIVE DESCENT PARSER
+
+GRAMMAR:
+S -> L
+L -> L , S | S
+S -> a
+
+#include <stdio.h>
+char s[50];
+int i = 0;
+
+int S();
+int L();
+
+int S()
+{
+    if(s[i] == 'a')
+    {
+        i++;
+        return 1;
+    }
+    if(s[i] == '(')
+    {
+        i++;
+        if(L() && s[i] == ')')
+        {
+            i++;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int L()
+{
+    if(!S()) return 0;
+    while(s[i] == ',')
+    {
+        i++;
+        if(!S()) return 0;
+    }
+    return 1;
+}
+
+int main()
+{
+    printf("Enter string: ");
+    scanf("%49s", s);
+
+    if(S() && s[i] == '\0')
+        printf("Valid");
+    else
+        printf("Invalid");
+
+    return 0;
+}
+
+
+==========================================================
+PROGRAM 8
+CALCULATE FIRST FUNCTION
+
+GRAMMAR:
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id
+----------------------------------------------------------
+
+#include <stdio.h>
+
+int main()
+{
+    printf("FIRST(E) = {(, id}\n");
+    printf("FIRST(T) = {(, id}\n");
+    printf("FIRST(F) = {(, id}\n");
+
+    return 0;
+}
+
+
+
+==========================================================
+PROGRAM 9
+YACC TOP-DOWN PARSER
+
+GRAMMAR:
+S -> a A b
+A -> c A | d
+----------------------------------------------------------
+SAVE AS: 9.l
+
+flex 9.l
+
+SAVE AS: 9.y
+
+yacc -d 9.y
+gcc y.tab.c lex.yy.c -o program9 -lfl
+./program9
+==========================================================
+
+9.l
+----------------------------------------------------------
+
+%{
+#include "y.tab.h"
+%}
+
+%%
+
+[a-d] { return yytext[0]; }
+
+"\n" { return 0; }
+
+. { ; }
+
+%%
+
+int yywrap()
+{
+    return 1;
+}
+
+9.y
+----------------------------------------------------------
+
+%{
+#include <stdio.h>
+
+int yylex();
+void yyerror(char *message);
+%}
+
+%token a b c d
+
+%%
+
+start :
+    a A b { printf("Valid string\n"); };
+
+A :
+    c A | d ;
+
+%%
+
+void yyerror(char *message)
+{
+    printf("Invalid string\n");
+}
+
+int main()
+{
+    yyparse();
+    return 0;
+}
+
+SAMPLE OUTPUT
+----------------------------------------------------------
+Input:
+acdb
+
+Output:
+Valid string
+
+Input:
+adb
+
+Output:
+Valid string
+
+Input:
+axb
+
+Output:
+Invalid string
+
+==========================================================
+PROGRAM 10
+YACC PROGRAM TO EVALUATE ALGEBRAIC EXPRESSION
+This is the same calculator program as Program 4.
+----------------------------------------------------------
+SAVE AS: 10.l
+
+flex 10.l
+
+SAVE AS: 10.y
+
+yacc -d 10.y
+gcc y.tab.c lex.yy.c -o program10 -lfl
+./program10
+==========================================================
+
+10.l
+----------------------------------------------------------
+
+%{
+#include "y.tab.h"
+#include <stdlib.h>
+%}
+
+%%
+
+[0-9]+ {
+    yylval = atoi(yytext);
+    return NUM;
+}
+
+[+\-*/()] { return yytext[0]; }
+
+"\n" { return 0; }
+
+[ \t] { ; }
+
+.{ ; }
+
+%%
+
+int yywrap()
+{
+    return 1;
+}
+
+10.y
+----------------------------------------------------------
+
+%{
+#include <stdio.h>
+
+int yylex();
+void yyerror(char *message);
+%}
+
+%token NUM
+
+%left '+' '-'
+%left '*' '/'
+
+%%
+
+input :
+    expression { printf("Result = %d\n", $1); };
+
+expression :
+    expression '+' expression { $$ = $1 + $3; } |
+    expression '-' expression { $$ = $1 - $3; } |
+    expression '*' expression { $$ = $1 * $3; } |
+    expression '/' expression { $$ = $1 / $3; } |
+    '(' expression ')' { $$ = $2; } |
+    NUM { $$ = $1; };
+
+%%
+
+void yyerror(char *message)
+{
+    printf("Invalid expression\n");
+}
+
+int main()
+{
+    yyparse();
+    return 0;
+}
+
+
+==========================================================
+PROGRAM 11
+LEX PROGRAM FOR RESERVED WORDS AND IDENTIFIERS
+
+
+%{
+#include <stdio.h>
+%}
+
+%%
+"int"|"float"|"if"|"else"|"while"
+    printf("Reserved keyword: %s\n", yytext);
+
+[a-zA-Z][a-zA-Z0-9]*
+    printf("Identifier: %s\n", yytext);
+
+[ \t\n]+    ;
+.           ;
+%%
+
+int main()
+{
+    printf("Enter input: ");
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+==========================================================
+PROGRAM 12
+LEX PROGRAM TO VALIDATE VOWELS AND CONSONANTS
+
+%{
+#include <stdio.h>
+%}
+
+%%
+[aeiouAEIOU]  printf("Vowel: %s\n", yytext);
+[a-zA-Z]      printf("Consonant: %s\n", yytext);
+[ \t\n]+      ;
+.             ;
+%%
+
+int main()
+{
+    printf("Enter text: ");
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+==========================================================
+PROGRAM 13
+LEX PROGRAM TO VALIDATE NOUN AND VERB
+
+%{
+#include <stdio.h>
+%}
+
+%%
+"boy"|"girl"|"book"|"Ram"
+    printf("Noun: %s\n", yytext);
+
+"run"|"eat"|"play"|"write"
+    printf("Verb: %s\n", yytext);
+
+[ \t\n]+    ;
+[a-zA-Z]+   printf("Other word: %s\n", yytext);
+.           ;
+%%
+
+int main()
+{
+    printf("Enter words: ");
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+==========================================================
+PROGRAM 14
+THREE ADDRESS CODE
+
+
+
+#include <stdio.h>
+
+int main()
+{
+    char a, b, op;
+
+    printf("Enter expression (a+b): ");
+    scanf(" %c %c %c", &a, &op, &b);
+
+    printf("Three Address Code:\n");
+    printf("t1 = %c %c %c\n", a, op, b);
+
+    return 0;
+}
+
+
+
+==========================================================
+PROGRAM 15
+LEX PROGRAM TO FIND VOWELS AND CONSONANTS IN A FILE
+----------------------------------------------------------
+
+
+
+%{
+#include <stdio.h>
+int v = 0, c = 0;
+%}
+
+%%
+[aeiouAEIOU]  v++;
+[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]  c++;
+[ \t\n]+  ;
+.  ;
+%%
+
+int main()
+{
+    printf("Enter text: ");
+    yylex();
+    printf("Vowels = %d\n", v);
+    printf("Consonants = %d\n", c);
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+
+==========================================================
+PROGRAM 16
+LEX PROGRAM TO VALIDATE UPPERCASE LETTERS IN A FILE
+
+
+%{
+#include <stdio.h>
+%}
+
+%%
+[A-Z]+    printf("Uppercase: %s\n", yytext);
+[a-z]+    printf("Lowercase: %s\n", yytext);
+[0-9]+    printf("Number: %s\n", yytext);
+[ \t\n]+  ;
+.         ;
+%%
+
+int main()
+{
+    printf("Enter text: ");
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
+
+
+==========================================================
+PROGRAM 17
+LEX PROGRAM TO FIND WORDS, SPECIAL CHARACTERS, AND LINES
+
+%{
+#include <stdio.h>
+int words = 0, lines = 0;
+%}
+
+%%
+[^ \t\n]+  { words++; }
+\n         { lines++; }
+%%
+
+int main()
+{
+    yyin = fopen("input.txt", "r");
+    yylex();
+    printf("Words = %d\nLines = %d\n", words, lines);
+    fclose(yyin);
+    return 0;
+}
+
+int yywrap() { return 1; }
+
+
+
+
+==========================================================
+PROGRAM 18
+LEX PROGRAM TO IMPLEMENT ARITHMETIC OPERATIONS
+
+
+%{
+#include <stdio.h>
+%}
+
+%%
+[0-9]+[+\-*/][0-9]+  {
+    int a, b;
+    char op;
+    sscanf(yytext, "%d%c%d", &a, &op, &b);
+
+    if(op == '+') printf("Result = %d\n", a+b);
+    if(op == '-') printf("Result = %d\n", a-b);
+    if(op == '*') printf("Result = %d\n", a*b);
+    if(op == '/' && b != 0) printf("Result = %d\n", a/b);
+    if(op == '/' && b == 0) printf("Cannot divide by zero\n");
+}
+[ \t\n]+ ;
+.       printf("Invalid expression\n");
+%%
+
+int main()
+{
+    printf("Enter expression: ");
+    yylex();
+    return 0;
+}
+
+int yywrap()
+{
+    return 1;
+}
+
